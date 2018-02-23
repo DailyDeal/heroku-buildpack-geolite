@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# bin/compile <build-dir> <cache-dir> <env-dir>
+
+echo script started in__ $(pwd)
+echo script started with $*
+
+# fail fast
+set -e
+
+# debug
+# set -x
+
+# clean up leaking environment
+unset GIT_DIR
+
+# config
+
+# parse and derive params
+BUILD_DIR=$1
+CACHE_DIR=$2
+ENV_DIR=$2
+
+echo started with:\
+  BUILD_DIR: $BUILD_DIR,\
+  CACHE_DIR: $CACHE_DIR,\
+  ENV_DIR: $ENV_DIR
