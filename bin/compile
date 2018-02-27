@@ -10,69 +10,71 @@ set -e
 # set -x
 
 put() {
-  echo "$SCRIPT:" $*
+  echo "       " $*
 }
 
 put "script started in__ $(pwd)"
 put "script started with $*"
 
-## # clean up leaking environment
-## unset GIT_DIR
-## 
-## # config
-## 
-## # parse and derive params
-## [ -z "$1" ] && TEMP_DIR=$(mktemp -d /tmp/heroku_buldpack_geolit.XXXXXX)
-## BUILD_DIR=${1:-$TEMP_DIR/build}
-## CACHE_DIR=${2:-$TEMP_DIR/cache}
-## ENV_DIR=${3:-$TEMP_DIR/env}
-## 
-## put "started with:\
-##   BUILD_DIR: $BUILD_DIR,\
-##   CACHE_DIR: $CACHE_DIR,\
-##   ENV_DIR: $ENV_DIR\
-## "
-## 
-## PROFILE=$BUILD_DIR/.profile.d/geolite.sh
-## mkdir -p $(dirname $PROFILE)
-## [ -f $PROFILE ] && put "$PROFILE profile already exist: $PROFILE" && exit 1
-## 
-## GEOLITE_DIR=$BUILD_DIR/vendor/geolite
-## DOWNLOAD_DIR=$GEOLITE_DIR/downloads
-## DOWNLOADER=$GEOLITE_DIR/bin/geolite_download
-## [ -d $GEOLITE_DIR ] && put "$GEOLITE_DIR directory already exist" && exit 1
-## mkdir -p $DOWNLOAD_DIR
-## mkdir -p $(dirname $DOWNLOADER)
-## 
-## cat <<EOF >$PROFILE
-##   $DOWNLOADER &
-## EOF
-## put "profile___ created: $PROFILE"
-## 
-## cat <<EOF >$DOWNLOADER
-## 
-## SCRIPT="$DOWNLOADER()"
-## 
-## # fail fast
-## set -e
-## 
-## # debug
-## # set -x
-## 
-## put() {
-##   echo "\$SCRIPT:" $*
-## }
-## 
-## put "script started in__ $(pwd)"
-## put "script started with $*"
-## 
-## if [ ! -z "\$GEOLITE_CITY_URL" ]; then
-##   put "Download started  at $(date +%H:%M:%S) from \$GEOLITE_CITY_URL ..."
-##   put "Download finished at $(date +%H:%M:%S), creating database ..."
-##   put "DB creating ended at $(date +%H:%M:%S): \$GEOLITE_CITY_DB"
-## else
-##   put "nothing to do (use GEOLITE_CITY_URL to download data)"
-## fi
-## EOF
-## chmod +x $DOWNLOADER
-## put "downloader created: $DOWNLOADER"
+# clean up leaking environment
+unset GIT_DIR
+
+# config
+
+# parse and derive params
+[ -z "$1" ] && TEMP_DIR=$(mktemp -d /tmp/heroku_buldpack_geolit.XXXXXX)
+BUILD_DIR=${1:-$TEMP_DIR/build}
+CACHE_DIR=${2:-$TEMP_DIR/cache}
+ENV_DIR=${3:-$TEMP_DIR/env}
+
+put "started with:\
+  BUILD_DIR: $BUILD_DIR,\
+  CACHE_DIR: $CACHE_DIR,\
+  ENV_DIR: $ENV_DIR\
+"
+
+PROFILE=$BUILD_DIR/.profile.d/geolite.sh
+mkdir -p $(dirname $PROFILE)
+[ -f $PROFILE ] && put "$PROFILE profile already exist: $PROFILE" && exit 1
+
+GEOLITE_DIR=$BUILD_DIR/vendor/geolite
+DOWNLOAD_DIR=$GEOLITE_DIR/downloads
+DOWNLOADER=$GEOLITE_DIR/bin/geolite_download
+[ -d $GEOLITE_DIR ] && put "$GEOLITE_DIR directory already exist" && exit 1
+mkdir -p $DOWNLOAD_DIR
+mkdir -p $(dirname $DOWNLOADER)
+
+cat <<EOF >$PROFILE
+  $DOWNLOADER &
+EOF
+put "profile___ created: $PROFILE"
+
+cat <<EOF >$DOWNLOADER
+
+SCRIPT="$DOWNLOADER()"
+
+# fail fast
+set -e
+
+# debug
+# set -x
+
+put() {
+  echo "\$SCRIPT:" $*
+}
+
+put "script started in__ $(pwd)"
+put "script started with $*"
+
+if [ ! -z "\$GEOLITE_CITY_URL" ]; then
+  put "Download started  at $(date +%H:%M:%S) from \$GEOLITE_CITY_URL ..."
+  put "Download finished at $(date +%H:%M:%S), creating database ..."
+  put "DB creating ended at $(date +%H:%M:%S): \$GEOLITE_CITY_DB"
+else
+  put "nothing to do (use GEOLITE_CITY_URL to download data)"
+fi
+EOF
+chmod +x $DOWNLOADER
+put "downloader created: $DOWNLOADER"
+
+echo "-----> geolite done"
