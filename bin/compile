@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # bin/compile <build-dir> <cache-dir> <env-dir>
 
-SCRIPT="heroku-buildpack-geolite/compile()"
+SCRIPT="heroku-buildpack-geolite/compile"
 
 # fail fast
 set -e
@@ -10,11 +10,12 @@ set -e
 # set -x
 
 put() {
-  echo "       " $*
+  echo "       " "$*"
 }
 
 put "script started in__ $(pwd)"
 put "script started with $*"
+put ""
 
 # clean up leaking environment
 unset GIT_DIR
@@ -22,7 +23,7 @@ unset GIT_DIR
 # config
 
 # parse and derive params
-[ -z "$1" ] && TEMP_DIR=$(mktemp -d /tmp/heroku_buldpack_geolit.XXXXXX)
+[ -z "$1" ] && TEMP_DIR=$(mktemp -d /tmp/heroku_buldpack_geolite.XXXXXX)
 BUILD_DIR=${1:-$TEMP_DIR/build}
 CACHE_DIR=${2:-$TEMP_DIR/cache}
 ENV_DIR=${3:-$TEMP_DIR/env}
@@ -33,25 +34,29 @@ put "started with:\
   ENV_DIR: $ENV_DIR\
 "
 
+GEOLITE_DIR=vendor/geolite
+DOWNLOADER=$GEOLITE_DIR/bin/geolite_download
+
 PROFILE=$BUILD_DIR/.profile.d/geolite.sh
 mkdir -p $(dirname $PROFILE)
 [ -f $PROFILE ] && put "$PROFILE profile already exist: $PROFILE" && exit 1
 
-GEOLITE_DIR=$BUILD_DIR/vendor/geolite
-DOWNLOAD_DIR=$GEOLITE_DIR/downloads
-DOWNLOADER=$GEOLITE_DIR/bin/geolite_download
-[ -d $GEOLITE_DIR ] && put "$GEOLITE_DIR directory already exist" && exit 1
-mkdir -p $DOWNLOAD_DIR
-mkdir -p $(dirname $DOWNLOADER)
-
 cat <<EOF >$PROFILE
-  $DOWNLOADER &
+  /app/$DOWNLOADER &
 EOF
 put "profile___ created: $PROFILE"
 
-cat <<EOF >$DOWNLOADER
+DOWNLOAD_DIR=$GEOLITE_DIR/downloads
+DOWNLOADER=$BUILD_DIR/$DOWNLOADER
+[ -d $BUILD_DIR/$GEOLITE_DIR ] && put "error: directory already exist: $BUILD_DIR/$GEOLITE_DIR" && exit 1
+mkdir -p $BUILD_DIR/$DOWNLOAD_DIR
+mkdir -p $(dirname $DOWNLOADER)
 
-SCRIPT="$DOWNLOADER()"
+cat <<EOF >$DOWNLOADER
+#!/usr/bin/env bash
+# geolite_download [<home-dir>] # into -> <home-dir>/$DOWNLOAD_DIR/<day>-<time>.<pid>/
+
+SCRIPT="\$0"
 
 # fail fast
 set -e
@@ -60,18 +65,42 @@ set -e
 # set -x
 
 put() {
-  echo "\$SCRIPT:" $*
+  echo "\$SCRIPT:" "\$*"
 }
 
-put "script started in__ $(pwd)"
-put "script started with $*"
+put "script started in__ \$(pwd)"
+put "script started with \$*"
+put ""
 
-if [ ! -z "\$GEOLITE_CITY_URL" ]; then
-  put "Download started  at $(date +%H:%M:%S) from \$GEOLITE_CITY_URL ..."
-  put "Download finished at $(date +%H:%M:%S), creating database ..."
-  put "DB creating ended at $(date +%H:%M:%S): \$GEOLITE_CITY_DB"
+HOME_DIR=\${1:-\$HOME}
+
+if [ ! -z "\${GEOLITE_CITY_TARGET_PATH}" ]; then
+  mkdir -p \$(dirname \$GEOLITE_CITY_TARGET_PATH)
+  touch \$GEOLITE_CITY_TARGET_PATH
+  [ -z "\${GEOLITE_CITY_SOURCE_URL}" ] && cat /dev/null >\${GEOLITE_CITY_TARGET_PATH}
+fi
+
+if [ ! -z "\${GEOLITE_CITY_SOURCE_URL}" ]; then
+
+  DOWNLOAD_DIR=\$HOME_DIR/$DOWNLOAD_DIR/\$(date +%Y%m%d-%H%M%S).\$\$
+  mkdir \$DOWNLOAD_DIR
+  put "Download started  at \$(date +%H:%M:%S) from \$GEOLITE_CITY_SOURCE_URL into \$DOWNLOAD_DIR ..."
+
+  (cd \$DOWNLOAD_DIR && curl -O \$GEOLITE_CITY_SOURCE_URL)
+
+  put "Download finished at \$(date +%H:%M:%S), creating database ..."
+
+  DOWNLOADED_FILE=\$(ls \$DOWNLOAD_DIR/*)
+  DOWNLOADED_NAME=\$(basename \$DOWNLOADED_FILE .tar.gz)
+
+  [ -z "\${GEOLITE_CITY_TARGET_PATH}" ] && GEOLITE_CITY_TARGET_PATH=\$HOME_DIR/$GEOLITE_DIR/\$DOWNLOADED_NAME.db
+  [ ! -f \${GEOLITE_CITY_TARGET_PATH} ] || (mkdir -p \$(dirname \$GEOLITE_CITY_TARGET_PATH) && touch \$GEOLITE_CITY_TARGET_PATH)
+
+  (cd \$DOWNLOAD_DIR && (gunzip -c \$DOWNLOADED_FILE | tar -x) && cat \$(find . -name '*.mmdb') > \$GEOLITE_CITY_TARGET_PATH)
+
+  put "DB creating ended at \$(date +%H:%M:%S): \$GEOLITE_CITY_DB"
 else
-  put "nothing to do (use GEOLITE_CITY_URL to download data)"
+  put "nothing to do (use GEOLITE_CITY_SOURCE_URL to download data)"
 fi
 EOF
 chmod +x $DOWNLOADER
