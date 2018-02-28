@@ -13,6 +13,7 @@ put() {
   echo "       " "$*"
 }
 
+put ""
 put "script started in__ $(pwd)"
 put "script started with $*"
 put ""
@@ -68,6 +69,7 @@ put() {
   echo "\$SCRIPT:" "\$*"
 }
 
+put ""
 put "script started in__ \$(pwd)"
 put "script started with \$*"
 put ""
@@ -86,7 +88,7 @@ if [ ! -z "\${GEOLITE_CITY_SOURCE_URL}" ]; then
   mkdir \$DOWNLOAD_DIR
   put "Download started  at \$(date +%H:%M:%S) from \$GEOLITE_CITY_SOURCE_URL into \$DOWNLOAD_DIR ..."
 
-  (cd \$DOWNLOAD_DIR && curl -O \$GEOLITE_CITY_SOURCE_URL)
+  (cd \$DOWNLOAD_DIR && curl -Os \$GEOLITE_CITY_SOURCE_URL)
 
   put "Download finished at \$(date +%H:%M:%S), creating database ..."
 
@@ -98,7 +100,7 @@ if [ ! -z "\${GEOLITE_CITY_SOURCE_URL}" ]; then
 
   (cd \$DOWNLOAD_DIR && (gunzip -c \$DOWNLOADED_FILE | tar -x) && cat \$(find . -name '*.mmdb') > \$GEOLITE_CITY_TARGET_PATH)
 
-  put "DB creating ended at \$(date +%H:%M:%S): \$GEOLITE_CITY_DB"
+  put "DB creating ended at \$(date +%H:%M:%S): \$GEOLITE_CITY_TARGET_PATH"
 else
   put "nothing to do (use GEOLITE_CITY_SOURCE_URL to download data)"
 fi
@@ -107,3 +109,4 @@ chmod +x $DOWNLOADER
 put "downloader created: $DOWNLOADER"
 
 echo "-----> geolite done"
+echo ""
