@@ -76,31 +76,51 @@ put ""
 
 HOME_DIR=\${1:-\$HOME}
 
-if [ ! -z "\${GEOLITE_CITY_TARGET_PATH}" ]; then
+if [ ! -z "\$GEOLITE_CITY_TARGET_PATH" ]; then
+  GEOLITE_CITY_TARGET_PATH_MD5=\$GEOLITE_CITY_TARGET_PATH.md5
   mkdir -p \$(dirname \$GEOLITE_CITY_TARGET_PATH)
   touch \$GEOLITE_CITY_TARGET_PATH
-  [ -z "\${GEOLITE_CITY_SOURCE_URL}" ] && cat /dev/null >\${GEOLITE_CITY_TARGET_PATH}
+  touch \$GEOLITE_CITY_TARGET_PATH_MD5
+  [ -z "\$GEOLITE_CITY_SOURCE_URL" ] && cat /dev/null >\$GEOLITE_CITY_TARGET_PATH && cat /dev/null >\$GEOLITE_CITY_TARGET_PATH_MD5
+else
+  unset GEOLITE_CITY_TARGET_PATH_MD5
 fi
 
 if [ ! -z "\${GEOLITE_CITY_SOURCE_URL}" ]; then
+  [ -z "\${GEOLITE_CITY_TARGET_PATH}" ] && GEOLITE_CITY_TARGET_PATH=\$HOME_DIR/$GEOLITE_DIR/\$(basename \$GEOLITE_CITY_SOURCE_URL .tar.gz).db
+  GEOLITE_CITY_TARGET_PATH_MD5=\$GEOLITE_CITY_TARGET_PATH.md5
+  for TARGET in \$GEOLITE_CITY_TARGET_PATH \$GEOLITE_CITY_TARGET_PATH_MD5; do
+    [ ! -f \$TARGET ] && mkdir -p \$(dirname \$TARGET && touch \$TARGET)
+  done
 
   DOWNLOAD_DIR=\$HOME_DIR/$DOWNLOAD_DIR/\$(date +%Y%m%d-%H%M%S).\$\$
   mkdir \$DOWNLOAD_DIR
-  put "Download started  at \$(date +%H:%M:%S) from \$GEOLITE_CITY_SOURCE_URL into \$DOWNLOAD_DIR ..."
 
-  (cd \$DOWNLOAD_DIR && curl -Os \$GEOLITE_CITY_SOURCE_URL)
+  cd \$DOWNLOAD_DIR
 
-  put "Download finished at \$(date +%H:%M:%S), creating database ..."
+  curl -Os \$GEOLITE_CITY_SOURCE_URL.md5
+  DOWNLOADED_MD5=\$(find . -name '*.tar.gz.md5')
 
-  DOWNLOADED_FILE=\$(ls \$DOWNLOAD_DIR/*)
-  DOWNLOADED_NAME=\$(basename \$DOWNLOADED_FILE .tar.gz)
+  if \$(cmp -s \$GEOLITE_CITY_TARGET_PATH_MD5 \$DOWNLOADED_MD5); then
+    put "DB creating ended at \$(date +%H:%M:%S): md5-s are equal -> no download needed"
+  else
+    put "Download started  at \$(date +%H:%M:%S) from \$GEOLITE_CITY_SOURCE_URL into \$DOWNLOAD_DIR ..."
 
-  [ -z "\${GEOLITE_CITY_TARGET_PATH}" ] && GEOLITE_CITY_TARGET_PATH=\$HOME_DIR/$GEOLITE_DIR/\$DOWNLOADED_NAME.db
-  [ ! -f \${GEOLITE_CITY_TARGET_PATH} ] || (mkdir -p \$(dirname \$GEOLITE_CITY_TARGET_PATH) && touch \$GEOLITE_CITY_TARGET_PATH)
+    curl -Os \$GEOLITE_CITY_SOURCE_URL
+    DOWNLOADED_FILE=\$(find . -name '*.tar.gz')
 
-  (cd \$DOWNLOAD_DIR && (gunzip -c \$DOWNLOADED_FILE | tar -x) && cat \$(find . -name '*.mmdb') > \$GEOLITE_CITY_TARGET_PATH)
+    put "Download finished at \$(date +%H:%M:%S), creating database ..."
 
-  put "DB creating ended at \$(date +%H:%M:%S): \$GEOLITE_CITY_TARGET_PATH"
+    gunzip -c \$DOWNLOADED_FILE | tar -x
+    DOWNLOADED_DB=\$(find . -name '*.mmdb')
+
+    cat \$DOWNLOADED_DB  >\$GEOLITE_CITY_TARGET_PATH
+    cat \$DOWNLOADED_MD5 >\$GEOLITE_CITY_TARGET_PATH_MD5
+
+    rm -rf \$(dirname \$DOWNLOADED_DB)
+
+    put "DB creating ended at \$(date +%H:%M:%S): \$GEOLITE_CITY_TARGET_PATH"
+  fi
 else
   put "nothing to do (use GEOLITE_CITY_SOURCE_URL to download data)"
 fi
